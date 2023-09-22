@@ -23,9 +23,10 @@ class Monitor:
             setattr(self, k, v)
 
         self.sensor = adafruit_sht4x.SHT4x(board.I2C())
-        self.temp, self.humidity = self.sensor.measurements
-        self.temp_out_of_range = not (self.temp_range[0] < self.temp < self.temp_range[1])
-        self.hum_out_of_range = not (self.humidity_range[0] < self.humidity < self.humidity_range[1])
+        self.temp = None
+        self.humidity = None
+        self.temp_out_of_range = False
+        self.hum_out_of_range = False
 
         self.get_new_logger()
 
