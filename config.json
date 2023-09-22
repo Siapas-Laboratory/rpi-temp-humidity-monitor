@@ -1,0 +1,8 @@
+{
+    "room": "B150",
+    "sender": "siapas.temp.humidity@gmail.com",
+    "receivers": ["nnyema@gmail.com"],
+    "temp_range": [10, 30],
+    "humidity_range": [40, 50],
+    "interval": 60
+}
