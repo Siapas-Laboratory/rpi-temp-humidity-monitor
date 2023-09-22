@@ -119,12 +119,7 @@ class Monitor:
                 self.logger.warning(f"Error caught while notifying {receiver}: {str(e)}")
 
 if __name__  == '__main__':
-
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--interval", default = 1)
-    args = parser.parse_args()
-
-    s = Monitor(args.interval)
-    s.start()
+    
+    m = Monitor()
+    m.start()
 
