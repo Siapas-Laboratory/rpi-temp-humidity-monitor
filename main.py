@@ -53,7 +53,6 @@ class Monitor:
         log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         log_file_handler.setFormatter(log_formatter)
         self.logger.addHandler(log_file_handler)
-        self.logger.addHandler(logging.StreamHandler())
 
     def start(self):
         while True:
@@ -120,7 +119,8 @@ class Monitor:
                 self.logger.warning(f"Error caught while notifying {receiver}: {str(e)}")
 
 if __name__  == '__main__':
-    
+    with open("sendgrid.env", 'r') as f:
+        os.environ["SENDGRID_API_KEY"] = f.readline()
     m = Monitor()
     m.start()
 

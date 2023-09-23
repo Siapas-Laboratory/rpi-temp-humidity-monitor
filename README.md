@@ -11,14 +11,14 @@ pip3 install -r requirements.txt
 This app uses SendGrid to send e-mail notification, so if you have not already done so, be sure to make an account with SendGrid, and setup the desired sender e-mail account as a verified sender through SendGrid. You will also need to get a SendGrid Web API key and run the following code to create a script for exporting the key as an environment variable:
 
 ```
-echo "export SENDGRID_API_KEY='YOUR_API_KEY'" > sendgrid.env
+echo "YOUR_API_KEY" > sendgrid.env
 echo "sendgrid.env" >> .gitignore
 ```
 
 
 
 ## Usage
-First edit the config file to reflect the necessary settings for a given raspberry pi. The sender should be an e-mail address that has been verified through SendGrid. The settings have the following meanings:
+First create a config file called `config.json` to reflect the necessary settings for a given raspberry pi. The sender should be an e-mail address that has been verified through SendGrid. The settings have the following meanings:
 
 * `sender` - The e-mail address that notifications will be sent from.
 * `receivers` - A list of e-mail addresses to send notifications to.
@@ -27,17 +27,30 @@ First edit the config file to reflect the necessary settings for a given raspber
 * `interval` - Time interval in seconds between reads from the sensors
 
 
-Before starting the app set up your environment by running:
+The following is a sample config file:
 
 ```
-source ./sendgrid.env
+{
+    "room": "Clean Room",
+    "sender": "siapas.temp.humidity@gmail.com",
+    "receivers": ["nnyema@gmail.com", "vonebul@gmail.com"],
+    "temp_range": [20, 30],
+    "humidity_range": [30, 50],
+    "interval": 300
+}
 ```
 
-Finally run the following to start the app:
+Run the following to start the app in the background:
 
 ```
-python3 main.py
+nouhup python3 main.py &
 ```
 
 The app stores all logs at `~/.temp_humidity_logs`.
+
+To check that the script is still running, run:
+
+```
+ps ax | grep main.py
+```
 
