@@ -43,7 +43,7 @@ The following is a sample config file:
 Run the following to start the app in the background:
 
 ```
-nouhup python3 main.py &
+nohup python3 main.py &
 ```
 
 The app stores all logs at `~/.temp_humidity_logs`.
