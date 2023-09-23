@@ -32,8 +32,8 @@ The following is a sample config file:
 ```
 {
     "room": "Clean Room",
-    "sender": "siapas.temp.humidity@gmail.com",
-    "receivers": ["nnyema@gmail.com", "vonebul@gmail.com"],
+    "sender": "sender@gmail.com",
+    "receivers": ["receiver1@gmail.com", "receiver2@gmail.com"],
     "temp_range": [20, 30],
     "humidity_range": [30, 50],
     "interval": 300
