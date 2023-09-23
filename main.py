@@ -14,6 +14,7 @@ class Event(Enum):
     TEMP_OUT_OF_RANGE = 1
     HUM_OUT_OF_RANGE = 2
     ERROR = 3
+    STARTING = 4
 
 class Monitor:
     def __init__(self):
@@ -55,6 +56,7 @@ class Monitor:
         self.logger.addHandler(log_file_handler)
 
     def start(self):
+        self.notify(Event.STARTING)
         while True:
             try:
                 # get current measurements
@@ -105,7 +107,10 @@ class Monitor:
             subj = f"[ERROR WARNING]: ROOM {self.room} - {dt.now().strftime('%m-%d-%Y %H:%M:%S')}"
             msg = f"The following message was caught on the pi in room {self.room}:\n{err_msg}"
             self.logger.warning("Error caught: {err_msg}. Notifying...")
-        
+        elif event == Event.STARTING:
+            subj = f"[START NOTIFICATION]: Room {self.room}"
+            msg = f"Temperature and humidity monitor in room {self.room} has started successfully."
+            self.logger.info("Starting monitor. Notifying...")
         sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
         for receiver in self.receivers:
             try:
