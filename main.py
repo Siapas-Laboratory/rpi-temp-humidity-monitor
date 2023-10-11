@@ -87,8 +87,9 @@ class Monitor:
                 self.logger.info(f"Temperature (C): {self.temp}; Humidity (%): {self.humidity}")
                 time.sleep(self.interval)
 
-            except Exception as e:
+            except BaseException as e:
                 self.notify(Event.ERROR, err_msg = str(e))
+                break
 
     def notify(self, event: Event, err_msg = "Error"):
         """
@@ -105,7 +106,7 @@ class Monitor:
         elif event == Event.ERROR:
             subj = f"[ERROR WARNING]: ROOM {self.room} - {dt.now().strftime('%m-%d-%Y %H:%M:%S')}"
             msg = f"The following message was caught on the pi in room {self.room}:\n{err_msg}"
-            self.logger.warning("Error caught: {err_msg}. Notifying...")
+            self.logger.warning(f"Error caught: {err_msg}. Notifying...")
         elif event == Event.STARTING:
             subj = f"[START NOTIFICATION]: Room {self.room}"
             msg = f"Temperature and humidity monitor in room {self.room} has started successfully."
@@ -119,7 +120,7 @@ class Monitor:
                              html_content = msg)
                 response = sg.send(email)
                 # TODO: look into status codes to make sure the status is success
-            except Exception as e:
+            except BaseException as e:
                 self.logger.warning(f"Error caught while notifying {receiver}: {str(e)}")
 
 if __name__  == '__main__':
