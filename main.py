@@ -28,7 +28,6 @@ class Monitor:
         self.humidity = None
         self.temp_out_of_range = False
         self.hum_out_of_range = False
-
         self.get_new_logger()
 
 
@@ -42,7 +41,7 @@ class Monitor:
         now = dt.now()
         self.date = now.date()
         # get the new log directory
-        log_dir = os.path.join(os.path.expanduser('~'), ".temp-humidity-logs", str(now.year), now.strftime("%m-%Y"))
+        log_dir = os.path.join(self.root_dir, self.room, str(now.year), now.strftime("%m-%Y"))
         log_filename = os.path.join(log_dir, f"{now.strftime('%m-%d-%Y.log')}")
         os.makedirs(log_dir, exist_ok = True) # create the log dir if needed
 
@@ -51,7 +50,7 @@ class Monitor:
         self.logger.setLevel(logging.INFO)
 
         log_file_handler = logging.FileHandler(log_filename)
-        log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         log_file_handler.setFormatter(log_formatter)
         self.logger.addHandler(log_file_handler)
 

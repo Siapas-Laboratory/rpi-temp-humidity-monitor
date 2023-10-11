@@ -31,7 +31,8 @@ The following is a sample config file:
 
 ```
 {
-    "room": "Clean Room",
+    "root_dir": "path/to/root/for/logs"
+    "room": "Room-Name",
     "sender": "sender@gmail.com",
     "receivers": ["receiver1@gmail.com", "receiver2@gmail.com"],
     "temp_range": [20, 30],
