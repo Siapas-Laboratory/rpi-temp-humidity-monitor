@@ -10,11 +10,24 @@ from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
 
+eod_report_template = """
+Today the temperature was as follows:
+Mean: {mean_temp: .3f}
+Min: {min_temp: .3f}
+Max: {max_temp: .3f}
+
+The humidity was as follows:
+Mean: {mean_hum: .3f}
+Min: {min_hum: .3f}
+Max: {max_hum: .3f}
+"""
+
 class Event(Enum):
     TEMP_OUT_OF_RANGE = 1
     HUM_OUT_OF_RANGE = 2
     ERROR = 3
     STARTING = 4
+    END_OF_DAY = 5
 
 class Monitor:
     def __init__(self):
@@ -54,12 +67,17 @@ class Monitor:
         log_file_handler.setFormatter(log_formatter)
         self.logger.addHandler(log_file_handler)
 
+        self.day_temps = []
+        self.day_humidities = []
+
     def start(self):
         self.notify(Event.STARTING)
         while True:
             try:
                 # get current measurements
                 self.temp, self.humidity = self.sensor.measurements
+                self.day_temps.append(self.temp)
+                self.day_humidities.append(self.humidity)
 
                 # check if the measurements are in range and notify if necessary
                 # temperature
@@ -81,7 +99,10 @@ class Monitor:
 
                 # if it's a new day create a new log file
                 if dt.now().date() != self.date: 
+                    self.notify(Event.END_OF_DAY)
                     self.get_new_logger()
+                    self.day_temps = []
+                    self.day_humidities = []
 
                 # log the measurements
                 self.logger.info(f"Temperature (C): {self.temp}; Humidity (%): {self.humidity}")
@@ -111,6 +132,18 @@ class Monitor:
             subj = f"[START NOTIFICATION]: Room {self.room}"
             msg = f"Temperature and humidity monitor in room {self.room} has started successfully."
             self.logger.info("Starting monitor. Notifying...")
+        elif event == Event.END_OF_DAY:
+            subj = f"[END OF DAY REPORT]: Room {self.room} - {self.date.strftime('%m-%d-%Y')}"
+
+            msg = eod_report_template.format(
+                mean_temp = sum(self.day_temps)/len(self.day_temps),
+                mean_hum = sum(self.day_humidities)/len(self.day_humidities), 
+                min_temp = min(self.day_temps), 
+                min_hum = min(self.day_humidities),
+                max_temp = max(self.day_temps)
+                max_hum = max(self.day_humidities)
+                )
+                
         sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
         for receiver in self.receivers:
             try:
