@@ -41,8 +41,10 @@ class Monitor:
         self.humidity = None
         self.temp_out_of_range = False
         self.hum_out_of_range = False
+        self.day_temps = []
+        self.day_humidities = []
         self.get_new_logger()
-
+        
 
     def get_new_logger(self):
         """
@@ -66,9 +68,6 @@ class Monitor:
         log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         log_file_handler.setFormatter(log_formatter)
         self.logger.addHandler(log_file_handler)
-
-        self.day_temps = []
-        self.day_humidities = []
 
     def start(self):
         self.notify(Event.STARTING)
@@ -140,10 +139,10 @@ class Monitor:
                 mean_hum = sum(self.day_humidities)/len(self.day_humidities), 
                 min_temp = min(self.day_temps), 
                 min_hum = min(self.day_humidities),
-                max_temp = max(self.day_temps)
+                max_temp = max(self.day_temps),
                 max_hum = max(self.day_humidities)
                 )
-                
+
         sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
         for receiver in self.receivers:
             try:
