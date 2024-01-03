@@ -5,22 +5,26 @@ import time
 import logging
 from datetime import datetime as dt
 import os
-from enum import Enum
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
+from matplotlib import pyplot as plt
+import matplotlib.dates as mdates
+from io import BytesIO
+import base64
+from utils import *
 
-
-eod_report_template = """
-Today the temperature was as follows:
-Mean: {mean_temp: .3f}
-Min: {min_temp: .3f}
-Max: {max_temp: .3f}
+eod_report_template = """Today the temperature was as follows:
+Mean: {mean_temp: .3f}˚F
+Min: {min_temp: .3f}˚F
+Max: {max_temp: .3f}˚F
 
 The humidity was as follows:
-Mean: {mean_hum: .3f}
-Min: {min_hum: .3f}
-Max: {max_hum: .3f}
-"""
+Mean: {mean_hum: .3f}%
+Min: {min_hum: .3f}%
+Max: {max_hum: .3f}%
+
+<img src=\'data:image/png;base64,{plot}\'>
+""".replace('\n', '<br>')
 
 class Event(Enum):
     TEMP_OUT_OF_RANGE = 1
@@ -41,8 +45,7 @@ class Monitor:
         self.humidity = None
         self.temp_out_of_range = False
         self.hum_out_of_range = False
-        self.day_temps = []
-        self.day_humidities = []
+        self.log_dir = os.path.join(self.root_dir, self.room)
         self.get_new_logger()
         
 
@@ -56,27 +59,27 @@ class Monitor:
         now = dt.now()
         self.date = now.date()
         # get the new log directory
-        log_dir = os.path.join(self.root_dir, self.room, str(now.year), now.strftime("%m-%Y"))
-        log_filename = os.path.join(log_dir, f"{now.strftime('%m-%d-%Y.log')}")
-        os.makedirs(log_dir, exist_ok = True) # create the log dir if needed
+        self.log_filename = os.path.join(self.log_dir, f"{now.strftime('%m-%d-%Y.log')}")
+        os.makedirs(self.log_dir, exist_ok = True) # create the log dir if needed
 
         self.logger = logging.getLogger()
         self.logger.handlers.clear() # clear any existing handlers
         self.logger.setLevel(logging.INFO)
 
-        log_file_handler = logging.FileHandler(log_filename)
+        log_file_handler = logging.FileHandler(self.log_filename)
         log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         log_file_handler.setFormatter(log_formatter)
         self.logger.addHandler(log_file_handler)
+        self.date = dt.now().date()
+        
 
     def start(self):
         self.notify(Event.STARTING)
         while True:
             try:
                 # get current measurements
-                self.temp, self.humidity = self.sensor.measurements
-                self.day_temps.append(self.temp)
-                self.day_humidities.append(self.humidity)
+                _temp, self.humidity = self.sensor.measurements
+                self.temp = (_temp * 9/5) + 32
 
                 # check if the measurements are in range and notify if necessary
                 # temperature
@@ -87,6 +90,7 @@ class Monitor:
                         self.notify(Event.TEMP_OUT_OF_RANGE)
                 else:
                     self.temp_out_of_range = False
+                
                 #humidity
                 if not (self.humidity_range[0] < self.humidity < self.humidity_range[1]):
                     if not self.hum_out_of_range:
@@ -100,11 +104,9 @@ class Monitor:
                 if dt.now().date() != self.date: 
                     self.notify(Event.END_OF_DAY)
                     self.get_new_logger()
-                    self.day_temps = []
-                    self.day_humidities = []
-
+                
                 # log the measurements
-                self.logger.info(f"Temperature (C): {self.temp}; Humidity (%): {self.humidity}")
+                self.logger.info(f"Temperature (˚F): {self.temp}; Humidity (%): {self.humidity}")
                 time.sleep(self.interval)
 
             except BaseException as e:
@@ -117,7 +119,7 @@ class Monitor:
         """
         if event == Event.TEMP_OUT_OF_RANGE:
             subj = f"[TEMPERATURE WARNING]: ROOM {self.room} - {dt.now().strftime('%m-%d-%Y %H:%M:%S')}"
-            msg = f"Temperature is out of range in room {self.room}. The current temperature reading is {self.temp:.3f} ˚C"
+            msg = f"Temperature is out of range in room {self.room}. The current temperature reading is {self.temp:.3f} ˚F"
             self.logger.warning("Temperature out of range. Notifying...")
         elif event == Event.HUM_OUT_OF_RANGE:
             subj = f"[HUMIDITY WARNING]: ROOM {self.room} - {dt.now().strftime('%m-%d-%Y %H:%M:%S')}"
@@ -134,16 +136,40 @@ class Monitor:
         elif event == Event.END_OF_DAY:
             subj = f"[END OF DAY REPORT]: Room {self.room} - {self.date.strftime('%m-%d-%Y')}"
 
+            # plot temperatures and humidity over the course of the day
+            day_timestamps, day_temps, day_humidities = read_logfile(self.log_filename)
+            fig, ax = plt.subplots(1,1)
+            ax.plot(day_timestamps, day_temps, color = 'b')
+            ax2 = ax.twinx()
+            ax2.plot(day_timestamps, day_humidities, color = 'r')
+            ax2.set_ylabel("Humidity (%)", color = 'r')
+            ax.set_ylabel("Temperature (˚F)", color = 'b')
+            ax.xaxis.set_major_locator(mdates.HourLocator())
+            ax.xaxis.set_minor_locator(mdates.MinuteLocator(byminute=[15,30,45]))
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%-I%p'))
+            for l in ax.xaxis.get_ticklabels()[::2] + ax.xaxis.get_ticklabels()[1::4]: l.set_visible(False)
+
+            tmp = BytesIO()
+            fig.savefig(tmp, format = 'png')
+            fig.savefig('tmp.png')
+            plot = base64.b64encode(tmp.getvalue()).decode('utf-8')
+
             msg = eod_report_template.format(
-                mean_temp = sum(self.day_temps)/len(self.day_temps),
-                mean_hum = sum(self.day_humidities)/len(self.day_humidities), 
-                min_temp = min(self.day_temps), 
-                min_hum = min(self.day_humidities),
-                max_temp = max(self.day_temps),
-                max_hum = max(self.day_humidities)
+                mean_temp = sum(day_temps)/len(day_temps),
+                mean_hum = sum(day_humidities)/len(day_humidities), 
+                min_temp = min(day_temps), 
+                min_hum = min(day_humidities),
+                max_temp = max(day_temps),
+                max_hum = max(day_humidities),
+                plot = plot
                 )
 
+            with open("tmp.html", "w") as file:
+                file.write(msg)
+            
+
         sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+        print(os.environ.get('SENDGRID_API_KEY'))
         for receiver in self.receivers:
             try:
                 email = Mail(from_email = self.sender, 
@@ -160,4 +186,3 @@ if __name__  == '__main__':
         os.environ["SENDGRID_API_KEY"] = f.readline()
     m = Monitor()
     m.start()
-
