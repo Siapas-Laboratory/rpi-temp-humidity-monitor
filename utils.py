@@ -4,6 +4,7 @@ import typing
 import os
 import matplotlib.figure
 from matplotlib import pyplot as plt
+import matplotlib.dates as mdates
 
 
 class Event(Enum):
@@ -55,7 +56,7 @@ def read_logfile(fpath: typing.Union[str, os.PathLike] ) -> typing.Tuple[list, l
     return times, temps, hums
 
 def plot_day_measurements(fpath: typing.Union[str, os.PathLike], 
-                          show: = False)-> typing.Tuple[matplotlib.figure.Figure, plt.Axes, plt.Axes, list, list, list]:
+                          show:bool = False)-> typing.Tuple[matplotlib.figure.Figure, plt.Axes, plt.Axes, list, list, list]:
     """
     read the temperature and humdity logs in a provided file
     and plot the measurements over time
@@ -86,7 +87,7 @@ def plot_day_measurements(fpath: typing.Union[str, os.PathLike],
     fig, ax = plt.subplots(1,1)
     ax.plot(times, temps, color = 'b')
     ax2 = ax.twinx()
-    ax2.plot(times, humidities, color = 'r')
+    ax2.plot(times, hums, color = 'r')
     ax2.set_ylabel("Humidity (%)", color = 'r')
     ax.set_ylabel("Temperature (˚F)", color = 'b')
     ax.xaxis.set_major_locator(mdates.HourLocator())
