@@ -153,6 +153,7 @@ class Monitor:
             fig.savefig(tmp, format = 'png')
             fig.savefig('tmp.png')
             plot = base64.b64encode(tmp.getvalue()).decode('utf-8')
+            plt.close(fig)
 
             msg = eod_report_template.format(
                 mean_temp = sum(day_temps)/len(day_temps),
