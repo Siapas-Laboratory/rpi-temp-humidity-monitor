@@ -116,7 +116,7 @@ class Monitor:
                 self.notify(Event.ERROR, tb = tb)
                 break
 
-    def notify(self, event: Event, tb = ""):
+    def notify(self, event: Event, tb:str = ""):
         """
         function for notifying designated receivers when a specified event occurs
         """
@@ -140,7 +140,7 @@ class Monitor:
             subj = f"[END OF DAY REPORT]: Room {self.room} - {self.date.strftime('%m-%d-%Y')}"
 
             # plot temperatures and humidity over the course of the day
-            fig, _, _, day_timestamps, day_temps, day_humidities = plot_day_measurements(self.log_filename)
+            fig, _, _, _, day_temps, day_humidities = plot_day_measurements(self.log_filename)
             tmp = BytesIO()
             fig.savefig(tmp, format = 'png')
             plot = base64.b64encode(tmp.getvalue()).decode('utf-8')
