@@ -12,6 +12,7 @@ import matplotlib.dates as mdates
 from io import BytesIO
 import base64
 from utils import *
+import traceback
 
 eod_report_template = """Today the temperature was as follows:
 Mean: {mean_temp: .3f}˚F
@@ -110,10 +111,12 @@ class Monitor:
                 time.sleep(self.interval)
 
             except BaseException as e:
-                self.notify(Event.ERROR, err_msg = str(e))
+                tb = traceback.format_exc()
+                self.logger.exception(e)
+                self.notify(Event.ERROR, tb = tb)
                 break
 
-    def notify(self, event: Event, err_msg = "Error"):
+    def notify(self, event: Event, tb = ""):
         """
         function for notifying designated receivers when a specified event occurs
         """
@@ -126,9 +129,9 @@ class Monitor:
             msg = f"Humidity is out of range in room {self.room}. The current humidity reading is {self.humidity:.3f} %"
             self.logger.warning("Humidity out of range. Notifying...")
         elif event == Event.ERROR:
+            tb = tb.replace('\n', '<br>')
             subj = f"[ERROR WARNING]: ROOM {self.room} - {dt.now().strftime('%m-%d-%Y %H:%M:%S')}"
-            msg = f"The following message was caught on the pi in room {self.room}:\n{err_msg}"
-            self.logger.warning(f"Error caught: {err_msg}. Notifying...")
+            msg = f"The following message was caught on the pi in room {self.room}:<br><br>{tb}"
         elif event == Event.STARTING:
             subj = f"[START NOTIFICATION]: Room {self.room}"
             msg = f"Temperature and humidity monitor in room {self.room} has started successfully."
@@ -137,21 +140,9 @@ class Monitor:
             subj = f"[END OF DAY REPORT]: Room {self.room} - {self.date.strftime('%m-%d-%Y')}"
 
             # plot temperatures and humidity over the course of the day
-            day_timestamps, day_temps, day_humidities = read_logfile(self.log_filename)
-            fig, ax = plt.subplots(1,1)
-            ax.plot(day_timestamps, day_temps, color = 'b')
-            ax2 = ax.twinx()
-            ax2.plot(day_timestamps, day_humidities, color = 'r')
-            ax2.set_ylabel("Humidity (%)", color = 'r')
-            ax.set_ylabel("Temperature (˚F)", color = 'b')
-            ax.xaxis.set_major_locator(mdates.HourLocator())
-            ax.xaxis.set_minor_locator(mdates.MinuteLocator(byminute=[15,30,45]))
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%-I%p'))
-            for l in ax.xaxis.get_ticklabels()[::2] + ax.xaxis.get_ticklabels()[1::4]: l.set_visible(False)
-
+            fig, _, _, day_timestamps, day_temps, day_humidities = plot_day_measurements(self.log_filename)
             tmp = BytesIO()
             fig.savefig(tmp, format = 'png')
-            fig.savefig('tmp.png')
             plot = base64.b64encode(tmp.getvalue()).decode('utf-8')
             plt.close(fig)
 
@@ -164,13 +155,8 @@ class Monitor:
                 max_hum = max(day_humidities),
                 plot = plot
                 )
-
-            with open("tmp.html", "w") as file:
-                file.write(msg)
             
-
         sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
-        print(os.environ.get('SENDGRID_API_KEY'))
         for receiver in self.receivers:
             try:
                 email = Mail(from_email = self.sender, 

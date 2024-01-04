@@ -2,6 +2,7 @@ from enum import Enum
 from datetime import datetime, date, timedelta
 import typing
 import os
+import matplotlib.figure
 
 
 class Event(Enum):
@@ -11,7 +12,7 @@ class Event(Enum):
     STARTING = 4
     END_OF_DAY = 5
 
-def read_logfile(fpath: typing.Union[str, os.PathLike] ) -> tuple[list, list, list]:
+def read_logfile(fpath: typing.Union[str, os.PathLike] ) -> typing.Tuple[list, list, list]:
     """
     read the temperature and humdity logs in a provided file
 
@@ -52,9 +53,51 @@ def read_logfile(fpath: typing.Union[str, os.PathLike] ) -> tuple[list, list, li
                 hums.append(hum)
     return times, temps, hums
 
+def plot_day_measurements(fpath: typing.Union[str, os.PathLike], 
+                          show: = False)-> typing.Tuple[matplotlib.figure.Figure, plt.Axes, plt.Axes, list, list, list]:
+    """
+    read the temperature and humdity logs in a provided file
+    and plot the measurements over time
 
+    Args:
+        fpath: typing.Union[str, os.PathLike]
+            path to the logfile to read
+        show: bool (optional)
+            whether or not to show the figure (defaults: False)
+
+    Returns:
+        fig: matplotlib.figure.Figure
+            the figure containing the plot
+        ax: plt.Axes
+            axis for temperature plot
+        ax2: plt.Axes
+            axis for humidity plot
+        times: list
+            list of datetimes corresponding to temperature
+            and humidity readings
+        temps: list
+            list of temperatures in farenheit
+        hums: list
+            list of humidities
+    """
+
+    times, temps, hums = read_logfile(fpath)
+    fig, ax = plt.subplots(1,1)
+    ax.plot(times, temps, color = 'b')
+    ax2 = ax.twinx()
+    ax2.plot(times, humidities, color = 'r')
+    ax2.set_ylabel("Humidity (%)", color = 'r')
+    ax.set_ylabel("Temperature (˚F)", color = 'b')
+    ax.xaxis.set_major_locator(mdates.HourLocator())
+    ax.xaxis.set_minor_locator(mdates.MinuteLocator(byminute=[15,30,45]))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%-I%p'))
+    for l in ax.xaxis.get_ticklabels()[::2] + ax.xaxis.get_ticklabels()[1::4]: 
+        l.set_visible(False)
+    if show: fig.show()
+    return fig, ax, ax2, times, temps, hums
+    
 def get_daily_stats(func: typing.Callable, start: date, n_days: int, 
-                    root_dir: typing.Union[str, os.PathLike]) -> tuple[list, list, list]:
+                    root_dir: typing.Union[str, os.PathLike]) -> typing.Tuple[list, list, list]:
     """
     get stats for each day of a span of days
 
