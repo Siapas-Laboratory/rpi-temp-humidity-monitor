@@ -2,6 +2,7 @@ from enum import Enum
 from datetime import datetime, date, timedelta
 import typing
 import os
+from matplotlib import pyplot as plt
 
 
 class Event(Enum):
