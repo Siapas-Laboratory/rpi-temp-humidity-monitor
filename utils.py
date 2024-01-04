@@ -3,6 +3,7 @@ from datetime import datetime, date, timedelta
 import typing
 import os
 import matplotlib.figure
+from matplotlib import pyplot as plt
 
 
 class Event(Enum):
